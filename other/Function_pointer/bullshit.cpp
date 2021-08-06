@@ -37,6 +37,7 @@ public:
 
 int main()
 {
+    cout << "test git" << endl;
     bullshit s1("Hi dude");
     s1.show();
 

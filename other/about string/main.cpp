@@ -132,7 +132,7 @@ int main(int argc, char **argv)
     cout << "Position of the every symbol that isn`t contained in \'The \': " << n << endl;
     */
 //----------------------------------------------------------------------------------------------------------------------------------
-    /*string name = "Vlad";
+    string name = "Vlad Streha";
     string your_name;
     
     getline(cin, your_name);
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
     if (n==0) cout << "the same ";
     else if (n<0) cout << "stay before the NAME";
     else cout << "stay after the NAME ";
-    cout << name.substr(0,2) << endl;*/
+    cout << name.substr(0,2) << endl;
 
     return 0;
 }

@@ -28,7 +28,7 @@ class Number : public Token // класс для хранения веществ
 private:
     double num;
 public:
-    Number(double n): num(n) {  }
+    Number(double n): num(n) { }
     char getOperator() override { return ' '; } // Фиктивная функция
     double getNumber() override { return num; }
     
@@ -39,7 +39,7 @@ class Operator : public Token // Класс для хранения символ
 private:
     char sign;
 public:
-    Operator(char ch): sign(ch) {  }
+    Operator(char ch): sign(ch) { }
     char getOperator() override { return sign; }
     double getNumber() override { return 0.0; } // Фиктивная функция
 };
@@ -100,6 +100,7 @@ bool Line::parse(Stack *stack)
 
             temp = atof(strNumber);       // Преобразуем строку-число в вещественное число
             n1 = new Number(temp);    // Создаём объект, помещаем в стек указатель на объект
+            std::cout << "В стек: " << n1->getNumber() << std::endl;
             stack->push(n1);
         }
         else 
@@ -109,12 +110,15 @@ bool Line::parse(Stack *stack)
             if (stack->getSize() == 0) // Если это первый оператор - кидаем его в стек
             {
                 op1 = new Operator(str[i]);
+                std::cout << "В стек: " << op1->getOperator() << std::endl;
                 stack->push(op1);
             }
             else    // А если нет - достаем из стека 2 элемента
             {
                 lastNumber = stack->pop();
                 lastOperator = stack->pop();
+                std::cout << lastNumber->getNumber() << ' ' << lastOperator->getOperator() << " <- из стека" << std::endl;
+
                 /*
                     Если операция умножения/деления предшествует сложению/вычитанию, то считаем произведение/частное.
                     Иначе обратно помещаем элементы в стек, потому что считать сумму/разность пока не вычислим
@@ -125,12 +129,49 @@ bool Line::parse(Stack *stack)
                 {
                     stack->push(lastOperator);
                     stack->push(lastNumber);
+                    std::cout << "В стек: " << lastNumber->getNumber() << ' ' << lastOperator->getOperator() << std::endl;
                 } // Иначе выполняем промежуточное вычисление
                 else
                 {
                     double buff;    // Буфер для промежуточного вычисления
                     char ch = lastOperator->getOperator();
                     Token *temp = stack->pop();
+                    
+                    /*
+        Вот в эту ловушку я попался
+                        50 - 30 - 5. Необходимо осторожно обрабатывать выражения с минусами.
+                        Если из стека доставать 2 числа и оператор, то получится следующие:
+                        30 - 5 = 25. Добавим в стек 25. В итоге в стеке 25, -, 50.
+                        Обработка последнего вычисления даст результат 25. Это ошибка!
+                        Если текущий оператор '-' (назову его ОПЕРАТОР A), то необходимо проверять еще 
+                        1 оператор из стека (ОПЕРАТОР В).
+                        В случае оператор В тоже равен '-', то оператор A нужно заменить с '-' на '+'.
+                    */
+
+                    if (ch == '-' && stack->getSize() != -1) 
+                    {
+                        Token *check = stack->pop(); // Оператор B
+                        if (check->getOperator() == '-') // Равен ли он тоже '-'
+                            ch = '+'; // замена на '+' оператора А
+                        stack->push(check); // Возвращаю в стек оператор В, равный '-'
+                    }else
+                    if (ch == '+' && stack->getSize() != -1) // Если оператор А = '+' 
+                    {
+                        // 100 - 30 + 80
+                        Token *check = stack->pop(); // достал из стека оператор B
+                        if (check->getOperator() == '-') // если он равен -
+                        { 
+                            ch = '-'; // то А изменяю на '-'
+                            Operator *op1 = new Operator('+'); // и добавляю в стек новый оператор В (вместо '-' = '+')
+                            std::cout << op1->getOperator() << " <- в стек" << std::endl;
+                            stack->push(op1);
+                            Token* t = temp; // меняю местами указатели на объекты типа Number для правильного вычисления
+                            temp = lastNumber;
+                            lastNumber = t;
+                        }
+                        else stack->push(check);
+                    }
+                    std::cout << temp->getNumber() << " <- из стека" << std::endl;
                     if (ch == '+') buff = (temp->getNumber() + lastNumber->getNumber());
                     else
                     if (ch == '-') buff = (temp->getNumber() - lastNumber->getNumber());
@@ -147,16 +188,19 @@ bool Line::parse(Stack *stack)
                     delete lastOperator;
                     delete temp;
                     n1 = new Number(buff); 
+                    std::cout << "В стек: " << n1->getNumber() << std::endl;
                     stack->push(n1);     // Записываем в стек новый элемент (посчитанный результат)
                 }
                 op1 = new Operator(str[i]); 
                 stack->push(op1); // Записываем текущий оператор в стек.
+                std::cout << "В стек: " << op1->getOperator() << std::endl;
             }
         }
-    }
+    } 
     return true;    
 }
-
+// 1000 - 800 - 200
+// 10000/1000+2000-1500-200-100/2-50
 double Line::calculateRetult(Stack *stack)
 {
     if (parse(stack))
@@ -167,9 +211,36 @@ double Line::calculateRetult(Stack *stack)
         {
             lastNumber = stack->pop();
             lastOperator = stack->pop();
+            std::cout << lastNumber->getNumber() << ' ' << lastOperator->getOperator() << std::endl;
             double buff;    
             char ch = lastOperator->getOperator();
             Token *temp = stack->pop();
+            std::cout << temp->getNumber() << std::endl;
+
+            // Это такой же блок проверки, как и в parse()
+            if (ch == '-' && stack->getSize() != -1) 
+            {
+                Token *check = stack->pop(); 
+                if (check->getOperator() == '-') 
+                    ch = '+'; 
+                stack->push(check); 
+            }else
+            if (ch == '+' && stack->getSize() != -1) 
+            {
+                Token *check = stack->pop();
+                if (check->getOperator() == '-')
+                { 
+                    ch = '-';
+                    Operator *op1 = new Operator('+');
+                    std::cout << op1->getOperator() << " <- в стек" << std::endl;
+                    stack->push(op1);
+                    Token* t = temp;
+                    temp = lastNumber;
+                    lastNumber = t;
+                }
+                else stack->push(check);
+            }
+
             if (ch == '+') buff = (temp->getNumber() + lastNumber->getNumber());
             else
             if (ch == '-') buff = (temp->getNumber() - lastNumber->getNumber());
@@ -186,6 +257,7 @@ double Line::calculateRetult(Stack *stack)
             delete lastOperator;
             delete temp;
             Number *n1 = new Number(buff); 
+            std::cout << "В стек: " << n1->getNumber() <<  std::endl;
             stack->push(n1);   
         }
     }
@@ -194,7 +266,11 @@ double Line::calculateRetult(Stack *stack)
         std::cout << "У вас ошибка в выражении." << std::endl;
         return 0;
     }
-    return (stack->pop()->getNumber());
+    Token *res = stack->pop(); 
+    double result = res->getNumber(); // Поместил рез в переменную 
+    std::cout << "Результат: ";
+    delete res; // И отчистил память
+    return result;
 }
 
 int main()
@@ -209,3 +285,12 @@ int main()
     std::cout << test.calculateRetult(&st) << std::endl;
     return 0;
 }
+
+// 25*10/5-10*3-5 = 15
+// 1000-100*2*2+400/2-200+900 = 1500
+// 100-5*4-20-5-5+50*3+100*2*3/20 = 200 + 30 = 230 
+// 10+10*20-5 = 205
+// 10.5+18.9*23.5-4.65 = 450
+// 10000/10/10/10*100/10/10/10 = 1
+// 10000/1000+2000-1500-200-100/2-50 = 210
+// 1000-100-200-100-200 = 400

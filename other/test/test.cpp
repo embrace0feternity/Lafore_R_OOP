@@ -1,50 +1,36 @@
 #include <iostream>
+#include <memory>
+#include <string>
 
-namespace iAverage
-{
-    int average(int a, int b)
-    {
-        return (a+b)/2;
-    }
-}
+using namespace std;
 
-namespace dAverage
-{
-    double average(int a, int b)
+class solder{
+    string name;
+    weak_ptr<solder> target;
+
+public:
+    solder(string name): name(name) { cout << "Create solder" << endl; }
+    ~solder() { cout << "delete solder" << endl; }
+    void setTarget(shared_ptr<solder>& ptr )
     {
-        double c = (a+b)/2.;
-        return c;
+        target = ptr;
     }
-}
+};
 
 int main()
 {
-    std::cout << iAverage::average(3,4) << std::endl;
-    std::cout << dAverage::average(3,4) << std::endl;
+    auto Archer = make_shared<solder>("vlad");  
+    auto Pickman = make_shared<solder>("egor"); // a = 1 : p = 1
+    
+    Archer->setTarget(Pickman); // a = 1 : p = 2
+    
+    cout << Pickman.use_count() << endl;
+    cout << Archer.use_count() << endl;
+
+    Pickman->setTarget(Archer); // a = 2 : p = 2 
+
+    cout << Pickman.use_count() << endl;
+    cout << Archer.use_count() << endl;
+
     return 0;
 }
-
-/*
-6)
-    10
-
-    4
-    0
-
-    10 1
-
-    10 -4
-
-7)
-    1
-    
-    4 1 2
-
-    2
-
-    2
-
-    4 1 2 
-    
-    2
-*/
